@@ -2,7 +2,8 @@
 /*****************************************************************************/
 
 cas mySession sessopts=(metrics=true);
-caslib myCaslib datasource=(srctype="dnfs") path="/data/data/BDF_SMALL_DB" sessref=mySession subdirs;
+/*caslib myCaslib datasource=(srctype="dnfs") path="/data/data/BDF_SMALL_DB" sessref=mySession subdirs;*/
+caslib myCaslib datasource=(srctype="dnfs") path="/SAS/BDF" sessref=mySession subdirs;
 *libname myCaslib cas;
 
 caslib _all_ assign;
@@ -131,3 +132,9 @@ quit;
 /*	keep code CONF_STATUS OBS_STATUS Periode_deb Periode_fin revision_deb revision_fin sum_montant;*/
 /*	if last.code then output;*/
 /*run;*/
+
+/*****************************************************************************/
+/* Cloture session                                                           */
+/*****************************************************************************/
+
+cas mysession terminate;
