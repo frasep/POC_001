@@ -166,19 +166,12 @@ quit;
 
 proc cas;
 	codeds="data casuser.pays_zone (replace=yes); 
-				set public.tablepayszone; 
+				set public.tablepayszone;
 				array chars {*} _varchar_; 
-				scan(code,4,'.');
 			run;";
 		print codeds;
 		dataStep.runCode / code=codeds;
 	end;
 quit;
-
-do _n_ = 1 to dim(chars); 
-					chars{_n_}='*';
-				end;
-				
-/* chars{_n_} =  TRANSTRN(chars{_n_},'._','*'); */
 
 cas mysession terminate;
