@@ -2,11 +2,16 @@
 /*****************************************************************************/
 
 cas mySession sessopts=(metrics=true);
-caslib myCaslib datasource=(srctype="dnfs") path="/data/data/BDF_SMALL_DB" sessref=mySession subdirs;
-/*caslib myCaslib datasource=(srctype="dnfs") path="/SAS/BDF" sessref=mySession subdirs;*/
+*caslib myCaslib datasource=(srctype="dnfs") path="/data/data/BDF_SMALL_DB" sessref=mySession subdirs;
+caslib myCaslib datasource=(srctype="dnfs") path="/SAS/BDF" sessref=mySession subdirs;
 *libname myCaslib cas;
 
 caslib _all_ assign;
+
+proc cas;
+
+	table.fileinfo / caslib="myCaslib";
+quit;
 
 proc cas;
 
@@ -17,7 +22,7 @@ proc cas;
 		table.fileinfo result=listfiles / caslib="myCaslib";
 		
 		do row over listfiles.fileinfo[1:listfiles.fileinfo.nrows];
-			if (index(row.Name,'.csv')<>0) then do;
+			if (index(row.Name,'.csv')<>0) and (index(row.Name,'creditcard')=0) then do;
 				datafile=row.Name;
 				tablename=scan(row.Name,1);
 				table.droptable / caslib="public" name=tablename quiet=true;
@@ -57,7 +62,7 @@ proc cas;
 	end;
 
 	/************************************************************************************************************************************/
-	/* Liste toutes les tables d'agregat et les concatene toutes en une seule en memoire contenat les champs nettoyés  */
+	/* Liste toutes les tables d'agregat et les concatene toutes en une seule en memoire contenat les champs nettoyï¿½s  */
 
 	function append_all_tables();
 		table.tableinfo result=listtables / caslib="public";
@@ -70,8 +75,8 @@ proc cas;
 	end;
 
 	/**************************************************************************************************************************************/
-	/* Creation d'une vue pour ajouter des champs calculés avec l'extraction des codes nettoyés par exemple on évite ainsi la duplication */
-	/* des données en mémoire                                                                                                             */
+	/* Creation d'une vue pour ajouter des champs calculï¿½s avec l'extraction des codes nettoyï¿½s par exemple on ï¿½vite ainsi la duplication */
+	/* des donnï¿½es en mï¿½moire                                                                                                             */
 
 /*	function create_global_view();*/
 /*		table.view /*/
@@ -88,7 +93,7 @@ proc cas;
 	/* Aggregate all data grouped by all colums except montant                                                                          */
 
 	function agregation_finale();
-		sql_code='create table casuser.agg_final {options replication=0 replace=true} as
+		sql_code='create table public.agg_final {options replication=0 replace=true promote=true} as
 					select code, CONF_STATUS, OBS_STATUS, Periode_deb, Periode_fin, revision_deb, revision_fin, sum(montant) as montant
 					from CASUSER.GLOBAL_AGG
 					group by code, CONF_STATUS, OBS_STATUS, Periode_deb, Periode_fin, revision_deb, revision_fin;';
