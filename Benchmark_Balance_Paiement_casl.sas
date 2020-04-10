@@ -10,11 +10,6 @@ caslib _all_ assign;
 
 proc cas;
 
-	table.fileinfo / caslib="myCaslib";
-quit;
-
-proc cas;
-
 	/* Lecture_table_agregation
 	/************************************************************************************************************************************/
 	/* Scan the input directory for .csv files, import them and strip blanks (begin and end) inside all string columns at the same time */
@@ -49,7 +44,7 @@ proc cas;
 	/************************************************************************************************************************************/
 	/* Preparation table pays zone                                                                                                      */
 	function prepare_pays_zone();
-		
+			
 	end;
 
 	/************************************************************************************************************************************/
@@ -74,30 +69,44 @@ proc cas;
 		end;
 	end;
 
-	/**************************************************************************************************************************************/
-	/* Creation d'une vue pour ajouter des champs calcul�s avec l'extraction des codes nettoy�s par exemple on �vite ainsi la duplication */
-	/* des donn�es en m�moire                                                                                                             */
 
-/*	function create_global_view();*/
-/*		table.view /*/
-/*			replace=true*/
-/*			caslib="casuser"*/
-/*			name="global_agg_view"*/
-/*			tables={{*/
-/*					name="global_agg",*/
-/*					caslib="casuser",*/
-/*					computedVars={{name="cle"}},computedVarsProgram="cle = scan(code,4,'.');"}};*/
-/*	end;*/
 	
 	/************************************************************************************************************************************/
 	/* Aggregate all data grouped by all colums except montant                                                                          */
 
 	function agregation_finale();
-		sql_code='create table public.agg_final {options replication=0 replace=true promote=true} as
+		sql_code='create table casuser.agg_final {options replication=0 replace=true} as
 					select code, CONF_STATUS, OBS_STATUS, Periode_deb, Periode_fin, revision_deb, revision_fin, sum(montant) as montant
 					from CASUSER.GLOBAL_AGG
 					group by code, CONF_STATUS, OBS_STATUS, Periode_deb, Periode_fin, revision_deb, revision_fin;';
 		fedsql.execdirect / query=sql_code;
+		table.promote / sourcecaslib="casuser" name="agg_final" target="AGG_FINAL" targetcaslib="public";
+
+
+	end;
+
+	
+	/************************************************************************************************************************************/
+	/* Main pipeline */
+	/************************************************************************************************************************************/
+
+	import_all_csv_files();
+	get_info_on_all_imported_files();
+	append_all_tables();
+	*create_global_view();
+	agregation_finale();
+quit;
+
+/*****************************************************************************/
+/* Cloture session                                                           */
+/*****************************************************************************/
+
+cas mysession terminate;
+
+
+/************************************************************************************************************************************/
+/* snippets en tampon                                                                                                               */
+/************************************************************************************************************************************/
 
 		/* Version CAS Action aggregate */
 		/*proc cas ;*/
@@ -141,42 +150,19 @@ proc cas;
 		/*      transpose={'_Sum_'} ;*/
 		/*quit ;*/
 		
-		
-		/* Version Datastep */
-		/*data casuser.agg_final_2(replace=yes);*/
-		/*	set casuser.global_agg;*/
-		/*	by code CONF_STATUS OBS_STATUS Periode_deb Periode_fin revision_deb revision_fin;*/
-		/*	retain sum_montant 0;*/
-		/*	sum_montant=sum_montant+montant;*/
-		/*	keep code CONF_STATUS OBS_STATUS Periode_deb Periode_fin revision_deb revision_fin sum_montant;*/
-		/*	if last.code then output;*/
-		/*run;*/
-	end;
 
-	
-	/************************************************************************************************************************************/
-	/* Main pipeline */
-	/************************************************************************************************************************************/
 
-	import_all_csv_files();
-	get_info_on_all_imported_files();
-	append_all_tables();
-	*create_global_view();
-	agregation_finale();
-quit;
+	/**************************************************************************************************************************************/
+	/* Creation d'une vue pour ajouter des champs calcul�s avec l'extraction des codes nettoy�s par exemple on �vite ainsi la duplication */
+	/* des donn�es en m�moire                                                                                                             */
 
-/*****************************************************************************/
-/* Cloture session                                                           */
-/*****************************************************************************/
-
-proc cas;
-	codeds="data casuser.pays_zone (replace=yes); 
-				set public.tablepayszone;
-				array chars {*} _varchar_; 
-			run;";
-		print codeds;
-		dataStep.runCode / code=codeds;
-	end;
-quit;
-
-cas mysession terminate;
+/*	function create_global_view();*/
+/*		table.view /*/
+/*			replace=true*/
+/*			caslib="casuser"*/
+/*			name="global_agg_view"*/
+/*			tables={{*/
+/*					name="global_agg",*/
+/*					caslib="casuser",*/
+/*					computedVars={{name="cle"}},computedVarsProgram="cle = scan(code,4,'.');"}};*/
+/*	end;*/
