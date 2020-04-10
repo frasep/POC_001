@@ -80,6 +80,7 @@ proc cas;
 					from CASUSER.GLOBAL_AGG
 					group by code, CONF_STATUS, OBS_STATUS, Periode_deb, Periode_fin, revision_deb, revision_fin;';
 		fedsql.execdirect / query=sql_code;
+		table.droptable / caslib="public" name=agg_final quiet=true;
 		table.promote / sourcecaslib="casuser" name="agg_final" target="AGG_FINAL" targetcaslib="public";
 
 
@@ -91,7 +92,7 @@ proc cas;
 	/************************************************************************************************************************************/
 
 	import_all_csv_files();
-	get_info_on_all_imported_files();
+	*get_info_on_all_imported_files();
 	append_all_tables();
 	*create_global_view();
 	agregation_finale();
