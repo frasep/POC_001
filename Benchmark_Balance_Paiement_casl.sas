@@ -2,8 +2,8 @@
 /*****************************************************************************/
 
 cas mySession sessopts=(metrics=true);
-*caslib myCaslib datasource=(srctype="dnfs") path="/data/data/BDF_SMALL_DB" sessref=mySession subdirs;
-caslib myCaslib datasource=(srctype="dnfs") path="/SAS/BDF" sessref=mySession subdirs;
+caslib myCaslib datasource=(srctype="dnfs") path="/data/data/BDF_SMALL_DB" sessref=mySession subdirs;
+*caslib myCaslib datasource=(srctype="dnfs") path="/SAS/BDF" sessref=mySession subdirs;
 *libname myCaslib cas;
 
 caslib _all_ assign;
@@ -68,8 +68,6 @@ proc cas;
 			end;
 		end;
 	end;
-
-
 	
 	/************************************************************************************************************************************/
 	/* Aggregate all data grouped by all colums except montant                                                                          */
@@ -80,13 +78,10 @@ proc cas;
 					from CASUSER.GLOBAL_AGG
 					group by code, CONF_STATUS, OBS_STATUS, Periode_deb, Periode_fin, revision_deb, revision_fin;';
 		fedsql.execdirect / query=sql_code;
-		table.droptable / caslib="public" name=agg_final quiet=true;
+		table.droptable / caslib="public" name="agg_final" quiet=true;
 		table.promote / sourcecaslib="casuser" name="agg_final" target="AGG_FINAL" targetcaslib="public";
-
-
 	end;
 
-	
 	/************************************************************************************************************************************/
 	/* Main pipeline */
 	/************************************************************************************************************************************/
@@ -97,6 +92,32 @@ proc cas;
 	*create_global_view();
 	agregation_finale();
 quit;
+
+data casuser.ZZ;
+	length code_pays $ 4 code_zone $ 4;
+	infile DATALINES dsd missover;
+	input code_pays $ code_zone $;
+	CARDS;
+_Z, _Z,
+;
+run;
+
+proc cas;
+		sql_code='create table casuser.pizone {options replication=0 replace=true} as
+					select code_pays, code_zone
+					from public.tablepayszone;
+					where code_zone is not null and code_zone<>" "';
+		fedsql.execdirect / query=sql_code;
+
+	end;
+quit;
+
+data casuser.pizone;
+
+	
+	set public.tablepayszone(keep=code_pays code_zone) casuser.ZZ ;
+run;
+
 
 /*****************************************************************************/
 /* Cloture session                                                           */
