@@ -32,6 +32,16 @@ proc cas;
 	end;
 
 	/************************************************************************************************************************************/
+	/* Prepare pizone table                                                                                                             */
+	function prepare_pizone();
+		fedsql.execdirect / query="
+		create table casuser.pizones {options replication=0 replace=true} as 
+		select code_pays,code_zone from public.tablepayszone 
+		union all 
+		select '_Z','_Z';";
+	end;
+
+	/************************************************************************************************************************************/
 	/* Get all information on imported tables and print it as output                                                                    */
 	function get_info_on_all_imported_files();
 		table.tableinfo result=list_tab / caslib="public";
@@ -39,12 +49,6 @@ proc cas;
 		do row over list_tab.tableinfo[1:list_tab.tableinfo.nrows];
 			table.columninfo / table={caslib="public" name=row.Name} ;
 		end;
-	end;
-
-	/************************************************************************************************************************************/
-	/* Preparation table pays zone                                                                                                      */
-	function prepare_pays_zone();
-			
 	end;
 
 	/************************************************************************************************************************************/
@@ -87,36 +91,15 @@ proc cas;
 	/************************************************************************************************************************************/
 
 	import_all_csv_files();
+	prepare_pizone();
 	*get_info_on_all_imported_files();
 	append_all_tables();
 	*create_global_view();
 	agregation_finale();
 quit;
 
-data casuser.ZZ;
-	length code_pays $ 4 code_zone $ 4;
-	infile DATALINES dsd missover;
-	input code_pays $ code_zone $;
-	CARDS;
-_Z, _Z,
-;
-run;
 
-proc cas;
-		sql_code='create table casuser.pizone {options replication=0 replace=true} as
-					select code_pays, code_zone
-					from public.tablepayszone;
-					where code_zone is not null and code_zone<>" "';
-		fedsql.execdirect / query=sql_code;
 
-	end;
-quit;
-
-data casuser.pizone;
-
-	
-	set public.tablepayszone(keep=code_pays code_zone) casuser.ZZ ;
-run;
 
 
 /*****************************************************************************/
