@@ -36,7 +36,7 @@ proc cas;
 	function prepare_pizone();
 		fedsql.execdirect / query="
 		create table casuser.pizones {options replication=0 replace=true} as 
-		select code_pays,code_zone from public.tablepayszone 
+		select code_pays,code_zone from public.tablepayszone where code_zone is not null and code_zone<>' '
 		union all 
 		select '_Z','_Z';";
 	end;
