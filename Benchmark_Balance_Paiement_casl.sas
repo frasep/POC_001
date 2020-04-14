@@ -36,9 +36,11 @@ proc cas;
 	function prepare_pizone();
 		fedsql.execdirect / query="
 		create table casuser.pizones {options replication=0 replace=true} as 
-		select code_pays,code_zone from public.tablepayszone where code_zone is not null and code_zone<>' '
+		select code_pays,code_zone from public.tablepayszone where code_pays is not null and code_pays<>''
 		union all 
 		select '_Z','_Z';";
+		table.droptable / name="pizones" caslib="public" quiet=true;
+		table.promote / sourcecaslib="casuser" name="pizones" target="pizones" targetcaslib="public";
 	end;
 
 	/************************************************************************************************************************************/
@@ -55,19 +57,24 @@ proc cas;
 	/* Concatenate two tables, cleanse code and create cle                                                                              */
 
 	function appendTable(inputcaslib, inputcastab, outputcaslib, outputcastab);
-		codeds="data """ || outputcastab || """(caslib=""" || outputcaslib || """ append=yes); set """ || inputcastab || """(caslib=""" || inputcaslib || """); length cle $ 3; cle = scan(code,4,'.'); run;";
+		codeds=
+		"data """ || outputcastab || """(caslib=""" || outputcaslib || """ append=yes); set """ || inputcastab || """(caslib=""" || inputcaslib || """); 
+		length cle $ 3;
+		cle = scan(code,4,'.'); 
+		run;";
+		
 		print codeds;
 		dataStep.runCode / code=codeds;
 	end;
 
 	/************************************************************************************************************************************/
-	/* Liste toutes les tables d'agregat et les concatene toutes en une seule en memoire contenat les champs nettoy�s  */
+	/* Liste toutes les tables d'agregat et les concatene toutes en une seule en memoire contenat les champs nettoyes  */
 
 	function append_all_tables();
 		table.tableinfo result=listtables / caslib="public";
 		table.droptable / caslib="casuser" name="global_agg" quiet=true;
 		do row over listtables.tableinfo[1:listtables.tableinfo.nrows];
-			if !(upcase(row.Name) in {'PLANAGREGATION','TABLEPAYSZONE'}) then do;
+			if !(upcase(row.Name) in {'PLANAGREGATION','TABLEPAYSZONE','PIZONES'}) then do;
 				appendTable("public",row.name,"casuser","global_agg");
 			end;
 		end;
@@ -92,22 +99,20 @@ proc cas;
 
 	import_all_csv_files();
 	prepare_pizone();
-	*get_info_on_all_imported_files();
+	get_info_on_all_imported_files();
 	append_all_tables();
 	*create_global_view();
 	agregation_finale();
+
+	table.tableinfo / caslib="public";
+
 quit;
-
-
-
-
 
 /*****************************************************************************/
 /* Cloture session                                                           */
 /*****************************************************************************/
 
 cas mysession terminate;
-
 
 /************************************************************************************************************************************/
 /* snippets en tampon                                                                                                               */
