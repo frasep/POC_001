@@ -1,5 +1,5 @@
-/*****************************************************************************/
-/*****************************************************************************/
+/************************************************************************************************************************************/
+/************************************************************************************************************************************/
 
 cas mySession sessopts=(metrics=true);
 caslib myCaslib datasource=(srctype="dnfs") path="/data/data/BDF_SMALL_DB" sessref=mySession subdirs;
@@ -13,6 +13,8 @@ proc cas;
 	/* Lecture_table_agregation
 	/************************************************************************************************************************************/
 	/* Scan the input directory for .csv files, import them and strip blanks (begin and end) inside all string columns at the same time */
+	/* Import all tables including reference tables                                                                                     */
+
 	function import_all_csv_files();
 		table.fileinfo result=listfiles / caslib="myCaslib";
 		
@@ -33,12 +35,33 @@ proc cas;
 
 	/************************************************************************************************************************************/
 	/* Prepare pizone table                                                                                                             */
+	/* ETAPE DATA: LECTURE TABLE PI_ZONE                                                                                                */
+/*
+recuperation_traitement_table_code_pays <- function(ReferencePiZones, ConnectionSecureDB)
+{
+  CheminReferentielPays <-  paste0("/home/ardtr/appli/travail/traard1562/traard1562_D/commun/NAB/ref_pays_zone/", ReferencePiZones, "/ref_pays_zone.sas7bdat")
+  TableCodePays <- data.table::data.table(read.csv2(ReferencePiZones))
+  setorder(TableCodePays, code_pays)
+  TablePays <- TableCodePays[, .(code_pays)]
+  TableZone <- TableCodePays[, .(code_zone)]
+  PiZone <- data.table::rbindlist(list(TablePays[, pays := code_pays], TableZone[, pays := code_zone]))
+PiZone$cle <- rep("_Z", ncol(PiZone))
+PiZone[, c("code_pays", "pays", "cle") := list(trimws(code_pays), trimws(pays), trimws(cle))]
+setorder(PiZone, pays, cle)
+print("end recuperation_traitement_table_code_pays monostream")
+  print(Sys.time())
+return(unique(PiZone))
+}
+*/
+
 	function prepare_pizone();
 		fedsql.execdirect / query="
 		create table casuser.pizones {options replication=0 replace=true} as 
-		select code_pays,code_zone from public.tablepayszone where code_pays is not null and code_pays<>''
-		union all 
-		select '_Z','_Z';";
+		select distinct code_pays as pays from public.tablepayszone where code_pays is not null and trim(code_pays)<>''
+		union
+		select distinct code_zone as pays from public.tablepayszone where code_zone is not null and trim(code_zone)<>''
+		union all
+		select '_Z' as pays;";
 		table.droptable / name="pizones" caslib="public" quiet=true;
 		table.promote / sourcecaslib="casuser" name="pizones" target="pizones" targetcaslib="public";
 	end;
@@ -60,7 +83,8 @@ proc cas;
 		codeds=
 		"data """ || outputcastab || """(caslib=""" || outputcaslib || """ append=yes); set """ || inputcastab || """(caslib=""" || inputcaslib || """); 
 		length cle $ 3;
-		cle = scan(code,4,'.'); 
+		cle = scan(code,4,'.');
+		keep code cle CONF_STATUS montant
 		run;";
 		
 		print codeds;
@@ -80,14 +104,46 @@ proc cas;
 		end;
 	end;
 	
+	function detection_nbperiode_moisDebut(freq, RevFin, PeriodeFin);
+		nbper = NULL;
+		Annee = (double)(substr((String)PeriodeFin, 1, 4));
+		if (freq == "M") then 
+		do;
+			if( RevFin == "KI") then nbper = 1;
+		    else if(substr((String)PeriodeFin,1,3) == "SD1") then nbper=3;
+		    else do;
+		      nbper=12;
+		      moisDebut=PeriodeFin;
+		    end;
+		end;
+		
+		if (freq == "Q") then
+		do;
+		  nbper=1;
+		  mm = (double)(substr((String)PeriodeFin, 6, 1));
+		  if (mm != 4) then
+		  do; 
+		      mm = mm*3;
+		      moisDebut = Annee || "0" || mm;
+		  end;
+		  else  moisDebut = Annee || "12";
+		end;
+		if (freq == "A") then	
+		do;
+		    nbper = 1;
+		    moisDebut = PeriodeFin;
+		end;
+		return({"nbper" = nbper, "moisDebut" = moisDebut});
+	end;
+
 	/************************************************************************************************************************************/
 	/* Aggregate all data grouped by all colums except montant                                                                          */
 
 	function agregation_finale();
 		sql_code='create table casuser.agg_final {options replication=0 replace=true} as
-					select code, CONF_STATUS, OBS_STATUS, Periode_deb, Periode_fin, revision_deb, revision_fin, sum(montant) as montant
+					select code, CONF_STATUS, sum(montant) as montant
 					from CASUSER.GLOBAL_AGG
-					group by code, CONF_STATUS, OBS_STATUS, Periode_deb, Periode_fin, revision_deb, revision_fin;';
+					group by code, CONF_STATUS;';
 		fedsql.execdirect / query=sql_code;
 		table.droptable / caslib="public" name="agg_final" quiet=true;
 		table.promote / sourcecaslib="casuser" name="agg_final" target="AGG_FINAL" targetcaslib="public";
@@ -104,6 +160,7 @@ proc cas;
 	*create_global_view();
 	agregation_finale();
 
+	table.tableinfo / caslib="casuser";
 	table.tableinfo / caslib="public";
 
 quit;
