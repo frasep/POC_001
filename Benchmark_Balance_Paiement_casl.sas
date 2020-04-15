@@ -11,9 +11,8 @@ caslib _all_ assign;
 proc cas;
 	%include "/data/github/POC_001/Balance_paiement_casl_functions.sas";
 
-
 	import_all_csv_files();
-	*prepare_pizone();
+	prepare_pizone();
 	prepare_planagreggation("public", "PLANAGREGATION","public", "PLANAGREGATION_T");
 	parametrage_aggregation_code_serie("public", "TESTPLANAG", "PIZONES", "planagregation_t");
 
@@ -21,6 +20,9 @@ proc cas;
 	*append_all_tables();
 	*create_global_view();
 	*agregation_finale();
+
+	/* Sauvegarde de la table final au format parquet */
+	table.save / caslib=incaslib name=incastab || ".parquet" table=incastab replace=true;
 
 	table.tableinfo / caslib="public";
 quit;

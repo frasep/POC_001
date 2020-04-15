@@ -77,102 +77,6 @@ function parametrage_aggregation_code_serie(usedcaslib, outputcastab, pizones, p
 	dataStep.runCode / code=codeds;
 end;
 
-
-
-/*
- AggregationTable <- AggregationTable[ , c("enfants", "parents") := list(code_entree, code_sortie)] 
-  AggregationTable$cle <- unlist(lapply(AggregationTable$enfants, function(Caractere){decouper_caractere_recuperer_element(Caractere,  Delimiteur = "\\.", indexElement = 4)}))
-  AggregationTable$ind_ <- unlist(lapply(AggregationTable$enfants, function(Caractere){decouper_caractere_recuperer_element(Caractere,  Delimiteur = "\\.", indexElement = 7)}))
-  print("Recuperation des positions et longueur parents dans les codes") 
-  
-  AggregationTable$PositionEnfant <- unlist(lapply(AggregationTable$enfants, 
-                                                   function(Caractere)
-                                                   {
-                                                     resultparam <- decouper_caractere_recuperer_longueur_position_element(Caractere, Delimiteur = "\\.", indexElement = 4)
-                                                     return(resultparam$position)
-                                                   }
-  )
-  )
-  
-  AggregationTable$LongueurEnfant  <- unlist(lapply(AggregationTable$enfants, 
-                                                    function(Caractere)
-                                                    {
-                                                      resultparam <- decouper_caractere_recuperer_longueur_position_element(Caractere, Delimiteur = "\\.", indexElement = 4)
-                                                      return(resultparam$longueur)
-                                                    }
-  )
-  )
-  
-  print("Recuperation des positions et longueur des parametres dans les codes")
-  
-  AggregationTable$PositionParametre <- unlist(lapply(AggregationTable$parents, 
-                                                      function(Caractere)
-                                                      {
-                                                        resultparam <- decouper_caractere_recuperer_longueur_position_element(Caractere, Delimiteur = "\\.", indexElement = 4)
-                                                        return(resultparam$position)
-                                                      }
-  )
-  )
-  
-  AggregationTable$LongueurParametre <- unlist(lapply(AggregationTable$parents, 
-                                                      function(Caractere)
-                                                      {
-                                                        resultparam <- decouper_caractere_recuperer_longueur_position_element(Caractere, Delimiteur = "\\.", indexElement = 4)
-                                                        return(resultparam$longueur)
-                                                      }
-  )
-  )
-  
-  print(Sys.time())
-
-  print("Recuperation des positions et longueur des index dans les codes")
-  
-  AggregationTable$PositionIndex <- unlist(lapply(AggregationTable$parents, 
-                                                  function(Caractere)
-                                                  {
-                                                    resultparam <- decouper_caractere_recuperer_longueur_position_element(Caractere, Delimiteur = "\\.", indexElement = 7)
-                                                    return(resultparam$position)
-                                                  }
-  )
-  )
-  
-  AggregationTable$LongueurIndex <- unlist(lapply(AggregationTable$parents, 
-                                                  function(Caractere)
-                                                  {
-                                                    resultparam <- decouper_caractere_recuperer_longueur_position_element(Caractere, Delimiteur = "\\.", indexElement = 7)
-                                                    return(resultparam$longueur)
-                                                  }
-  )
-  )
-
-  
-  print(Sys.time())
-  
-  print(paste0(as.character(round(x = (get_machine_ram_info()$total_memory-get_machine_ram_info()$free_memory)/(1024*1024))), " GB"))
-  
-  print("Creation des variables cd2_, cd3_, cd1_, refsec, countsec par decoupage des codes")
-  
-  AggregationTable$cd2_ <-  unlist(lapply(1:nrow(AggregationTable),function(i){ExtractString(AggregationTable$parents[i],
-                                                                                             (AggregationTable$PositionIndex[i]+AggregationTable$LongueurIndex[i]+1),
-                                                                                             (nchar(AggregationTable$parents[i])-(AggregationTable$PositionIndex[i]+AggregationTable$LongueurIndex[i]))
-  )
-  }))
-  
-  
-  AggregationTable$cd3_ <-  unlist(lapply(1:nrow(AggregationTable),function(i){ ExtractString(AggregationTable$enfants[i],
-                                                                                              AggregationTable$PositionIndex[i]+AggregationTable$LongueurIndex[i]+1,
-                                                                                              (nchar(AggregationTable$enfants[i])-(AggregationTable$PositionIndex[i]+AggregationTable$LongueurIndex[i]))
-  )
-  }))
-  
-  AggregationTable$cd1_ <-  unlist(lapply(1:nrow(AggregationTable),function(i){ ExtractString(AggregationTable$parents[i], 3,
-                                                                                              (AggregationTable$PositionIndex[i]-3))}))
-  
-  AggregationTable$refsec <- unlist(lapply(AggregationTable$enfants, function(Caractere){decouper_caractere_recuperer_element(Caractere,  Delimiteur = "\\.", indexElement = 5)}))
-  AggregationTable$countsec <- unlist(lapply(AggregationTable$enfants, function(Caractere){decouper_caractere_recuperer_element(Caractere,  Delimiteur = "\\.", indexElement = 6)}))
-
-*/
-
 /************************************************************************************************************************************/
 /* Get all information on imported tables and print it as output                                                                    */
 function get_info_on_all_imported_files();
@@ -255,7 +159,6 @@ function agregation_finale();
 	table.droptable / caslib="public" name="agg_final" quiet=true;
 	table.promote / sourcecaslib="casuser" name="agg_final" target="AGG_FINAL" targetcaslib="public";
 end;
-
 
 
 /************************************************************************************************************************************/
