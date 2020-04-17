@@ -638,7 +638,7 @@ application_plan_parametrage_aggregation_code_serie_mensuel <-function(Aggregati
   #CalculAggregationCodeSerieMensuel <- merge(AggregationMensuelleTouteCategorie, PlanAggregationParametre, all.x=TRUE, allow.cartesian=TRUE)
     
   RequeteSQL <- paste0("select A.*,(A.montant*B.formule) as montantcuml from ", AggregationMensuelleTouteCategorie," as A left outer join ",PlanAggregationParametre," as B on (A.code=B.code_entree)");
-  RequeteSqlFinaleCAS <- paste0("create table TMP_AGG {options replication=0 replace=true} as ",RequetesSQL,";")
+  RequeteSqlFinaleCAS <- paste0("create table TMP_AGG {options replication=0 replace=true} as ",RequeteSQL,";")
     cas.fedSql.execDirect(ConnectionSecureDB,query=RequeteSqlFinaleCAS)
 
   print("Taille de la jointure")
@@ -652,25 +652,25 @@ application_plan_parametrage_aggregation_code_serie_mensuel <-function(Aggregati
         select code as code_entree, OBS_STATUS,CONF_STATUS, Periode_deb, revision_deb, Periode_fin, revision_fin, sum(montantcuml) as montant 
         from TMP_AGG 
         group by code,OBS_STATUS,CONF_STATUS, Periode_deb, revision_deb, Periode_fin, revision_fin");
-  RequeteSqlFinaleCAS <- paste0("create table ",appPlanAggOutCAS, " {options replication=0 replace=true} as ",RequetesSQL,";")
+  RequeteSqlFinaleCAS <- paste0("create table ",appPlanAggOutCAS, " {options replication=0 replace=true} as ",RequeteSQL,";")
   
   cas.fedSql.execDirect(ConnectionSecureDB,query=RequeteSqlFinaleCAS)
 
+  Agregation_Code_Serie_Final <- defCasTable(conn, tablename=appPlanAggOutCAS, caslib='casuser') 
+    
   #CalculAggregationCodeSerieMensuel[, montantcuml := sum(montant*formule), by = code_sortie]
   
-  ResultSortie <- CalculAggregationCodeSerieMensuel[!is.na(montantcuml), ]
+  #ResultSortie <- CalculAggregationCodeSerieMensuel[!is.na(montantcuml), ]
   print(" TAILLE TABLE CalculAggregationCodeSerieMensuel")
-  print(dim(unique(CalculAggregationCodeSerieMensuel)))
-  print(Sys.time())
-  ResultSortie$montant <- ResultSortie$montantcuml
-  ResultFinal <- ResultSortie[, .(code_entree, code_sortie, montant, OBS_STATUS, CONF_STATUS,
-                                  Periode_deb, revision_deb, Periode_fin, revision_fin)]
-  
-  Agregation_Code_Serie_Final <- unique(ResultFinal[,.(code_sortie, montant)])
-  print(" TAILLE TABLE Agregation_Code_Serie_Final")
-  print("end application_plan_parametrage_aggregation_code_serie_mensuel monostream")
-  print(Sys.time())  
   print(dim(Agregation_Code_Serie_Final))
+  print(Sys.time())
+  #ResultSortie$montant <- ResultSortie$montantcuml
+  #ResultFinal <- ResultSortie[, .(code_entree, code_sortie, montant, OBS_STATUS, CONF_STATUS,Periode_deb, revision_deb, Periode_fin, revision_fin)]
+  #Agregation_Code_Serie_Final <- unique(ResultFinal[,.(code_sortie, montant)])
+  #print(" TAILLE TABLE Agregation_Code_Serie_Final")
+  #print("end application_plan_parametrage_aggregation_code_serie_mensuel monostream")
+  #print(Sys.time())  
+  #print(dim(Agregation_Code_Serie_Final))
   
-  return(unique(ResultSortie))
+  return(Agregation_Code_Serie_Final)
 }
