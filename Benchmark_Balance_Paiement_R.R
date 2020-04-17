@@ -10,49 +10,27 @@ library("swat")
 conn <- swat::CAS('viya35.local.fr', 5570, username='sasdemo', password='Lprzwb31CA')
 out <- cas.sessionProp.setSessOpt(conn, metrics=TRUE)
 
+# Defini une librairie CAS pointant sur le repertoire contenant tous les fichiers CSV en entree
+# On definie la source en DNFS, cela signifie que la lecture et ecriture des fichiers se fera en
+# multitheading automatiquement
+cas.table.addCaslib(conn,name="mycaslib", path="/data/data/BDF_SMALL_DB", dataSource={srcType="dnfs"})
 
-import_all_csv_in_memory <- function(inputcaslib)
-{
-  listfiles=cas.table.fileInfo(caslib=inputcaslib)
+# Fonction permettant d'importer tous les fichiers presents dans la librairie CAS definie plus haut
+import_all_csv_in_memory <- function(casconn, inputcaslib) {
+  listfiles=cas.table.fileInfo(casconn,caslib=inputcaslib)
   
-  for(k_ in 1:length(list_ind)){
-    
-  } 
-  
-  do row over listfiles.fileinfo[1:listfiles.fileinfo.nrows];
-  if (index(row.Name,'.csv')<>0) and (index(row.Name,'creditcard')=0) then do;
-  datafile=row.Name;
-  tablename=scan(row.Name,1);
-  table.droptable / caslib="public" name=tablename quiet=true;
-  table.loadTable / 
-    casout={caslib="public" name=tablename promote=true} 
-    caslib="myCaslib" 
-    path=datafile
-    importoptions={delimiter=";" filetype="csv" guessRows=10000 getnames=true varchars=true stripblanks=true};
-    end;
-    end;
-    run;
-    end;
-  
-  
-  return(TableASauvegarder)
+  for(i in 1:length(listfiles$FileInfo$Name)){
+    file_name <- listfiles$FileInfo$Name[i]
+    if ((grepl('.csv',file_name)) & !(grepl('creditcard',file_name))) {
+      split <- strsplit(file_name, ".")[[1]]
+      table_name <- split[1]
+      cas.table.dropTable(conn, caslib='public', name=table_name, quiet='true');
+      cas.table.loadTable(conn, casout=list(caslib='public',name=table_name,promote='true'), caslib=inputcaslib, path=file_name, importoptions=list(delimiter=';',filetype='csv',guessRows=10000,getnames='true',varchars='true',stripblanks='true'))
+    }
+  }
 }
 
+# Programme principal
 
-function import_all_csv_files();
-table.fileinfo result=listfiles / caslib="myCaslib";
-
-do row over listfiles.fileinfo[1:listfiles.fileinfo.nrows];
-if (index(row.Name,'.csv')<>0) and (index(row.Name,'creditcard')=0) then do;
-datafile=row.Name;
-tablename=scan(row.Name,1);
-table.droptable / caslib="public" name=tablename quiet=true;
-table.loadTable / 
-  casout={caslib="public" name=tablename promote=true} 
-  caslib="myCaslib" 
-  path=datafile
-  importoptions={delimiter=";" filetype="csv" guessRows=10000 getnames=true varchars=true stripblanks=true};
-  end;
-  end;
-  run;
-  end;
+import_all_csv_in_memory(conn, "mycaslib")
+  
