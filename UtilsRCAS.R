@@ -20,7 +20,7 @@ import_all_csv_in_memory <- function(casconn, inputcaslib, outputcaslib) {
 # ######################################################################################################
 # Fonction permettant de concatener deux tables CAS
 cas_append2tables <- function(casconn, inputcaslib, inputcastab, outputcaslib, outputcastab) {
-  codeds <- paste0('data "', outputcastab, '"(caslib="', outputcaslib , '" append=yes replace=yes); set "',inputcastab,'"(caslib="', inputcaslib, '"); length tablename $ 5; tablename="',inputcastab, '"; run;')
+  codeds <- paste0('data "', outputcastab, '"(caslib="', outputcaslib , '" append=yes copies=0); set "',inputcastab,'"(caslib="', inputcaslib, '"); length tablename $ 5; tablename="',inputcastab, '"; run;')
   cas.dataStep.runCode(casconn,code=codeds)
 }
 
@@ -433,7 +433,7 @@ lecture_tables_aggregation <-function(Freq, Mois, RevFin, PeriodeFin, Repertoire
   #  "Agregation__Z_"
   #)
   
-  CheminDataset <- paste0(Repertoire, ".", DebutNomDataset, RevFin, "_", PeriodeFin)
+  #CheminDataset <- paste0(Repertoire, ".", DebutNomDataset, RevFin, "_", PeriodeFin)
   
   ConditionSpeciale <- ((an <= 2011) | (an == 2014 & (RevFin %in% c("SD10", "SD11"))) | (an == 2013 & (RevFin %in% c("SD10", "SD11", "SD20"))))
   
@@ -567,7 +567,7 @@ lecture_tables_mixte <-function(Freq, Mois, RevFin, PeriodeFin, Repertoire, Conn
   
   list_col <- names(TableAggTteCategorie)
   traite_espace_list_col <- paste("COMPBL(",list_col,"), ",collapse='')
-  traite_espace_list_col <- substr(traite_espace_list_col,1,nchar(l)-2)
+  traite_espace_list_col <- substr(traite_espace_list_col,1,nchar(traite_espace_list_col)-2)
 
   TableIdMixte <- NULL
   
@@ -629,17 +629,13 @@ application_plan_parametrage_aggregation_code_serie_mensuel <-function(Aggregati
   #data.table::setkey(AggregationMensuelleTouteCategorie, code_entree)
   #data.table::setkey(PlanAggregationParametre, code_entree)
 
-  # Creation index des tables CAS
-  #cas.table.index(CASConnexion, casOut=list(name=AggregationMensuelleTouteCategorie, indexVars=c('code_entree'), replace=TRUE))
-  #cas.table.index(CASConnexion, casOut=list(name=PlanAggregationParametre, indexVars=c('code_entree'), replace=TRUE))
-    
   print(Sys.time())
   print("Jointure des tables PlanAggregationParametre, AggregationMensuelleTouteCategorie")
   #CalculAggregationCodeSerieMensuel <- merge(AggregationMensuelleTouteCategorie, PlanAggregationParametre, all.x=TRUE, allow.cartesian=TRUE)
     
   RequeteSQL <- paste0("select A.*,(A.montant*B.formule) as montantcuml from ", AggregationMensuelleTouteCategorie," as A left outer join ",PlanAggregationParametre," as B on (A.code=B.code_entree)");
   RequeteSqlFinaleCAS <- paste0("create table TMP_AGG {options replication=0 replace=true} as ",RequeteSQL,";")
-    cas.fedSql.execDirect(ConnectionSecureDB,query=RequeteSqlFinaleCAS)
+    cas.fedSql.execDirect(CASConnexion,query=RequeteSqlFinaleCAS,method=TRUE)
 
   print("Taille de la jointure")
   #print(dim(CalculAggregationCodeSerieMensuel))
@@ -648,15 +644,26 @@ application_plan_parametrage_aggregation_code_serie_mensuel <-function(Aggregati
   
   # Aggregation de la table par code
 
-  RequeteSQL <- paste0("
-        select code as code_entree, OBS_STATUS,CONF_STATUS, Periode_deb, revision_deb, Periode_fin, revision_fin, sum(montantcuml) as montant 
-        from TMP_AGG 
-        group by code,OBS_STATUS,CONF_STATUS, Periode_deb, revision_deb, Periode_fin, revision_fin");
-  RequeteSqlFinaleCAS <- paste0("create table ",appPlanAggOutCAS, " {options replication=0 replace=true} as ",RequeteSQL,";")
+  #RequeteSQL <- paste0("
+  #      select code as code_entree, OBS_STATUS,CONF_STATUS, Periode_deb, revision_deb, Periode_fin, revision_fin, sum(montantcuml) as montant 
+  #      from TMP_AGG 
+  #      group by code,OBS_STATUS,CONF_STATUS, Periode_deb, revision_deb, Periode_fin, revision_fin");
+  #RequeteSqlFinaleCAS <- paste0("create table ",appPlanAggOutCAS, " {options replication=0 replace=true} as ",RequeteSQL,";")
   
-  cas.fedSql.execDirect(ConnectionSecureDB,query=RequeteSqlFinaleCAS)
-
-  Agregation_Code_Serie_Final <- defCasTable(conn, tablename=appPlanAggOutCAS, caslib='casuser') 
+  #cas.fedSql.execDirect(ConnectionSecureDB,query=RequeteSqlFinaleCAS)
+ 
+  cas.aggregation.aggregate(CASConnexion,
+      table=list(
+          name="TMP_AGG", 
+          caslib="CASUSER" ,
+          groupBy=c("code","CONF_STATUS","OBS_STATUS","Periode_deb","Periode_fin","revision_deb","revision_fin"),
+          vars=c("montantcuml")
+      ),
+      varSpecs=list(list(name='montantcuml', summarySubset=c('SUM'), columnNames=c('MONTANT'))),
+      casout=list(name=appPlanAggOutCAS, caslib="CASUSER" ,replace=TRUE, replication=0)
+  )
+      
+  Agregation_Code_Serie_Final <- defCasTable(CASConnexion, tablename=appPlanAggOutCAS, caslib='casuser') 
     
   #CalculAggregationCodeSerieMensuel[, montantcuml := sum(montant*formule), by = code_sortie]
   
