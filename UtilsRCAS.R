@@ -612,12 +612,6 @@ application_plan_parametrage_aggregation_code_serie_mensuel <-function(Aggregati
   print("application_plan_parametrage_aggregation_code_serie_mensuel monostream")
   print(Sys.time())
   
-  #  nécessaire pour la comparaison des montants à la fin du code
-  #AggregationMensuelleTouteCategorie = AggregationMensuelleTouteCategorie[, montant:=as.double(montant)]
-  #PlanAggregationParametre[ , code_entree := corrige_double_point(code_entree)]
-  #PlanAggregationParametre[ , code_sortie := corrige_double_point(code_sortie)]
-  #AggregationMensuelleTouteCategorie <- data.table::data.table(AggregationMensuelleTouteCategorie)
-  
   print(Sys.time())
   print("Renomage de variables et traitement d'espace dans les chaines de caratere")
   
@@ -643,14 +637,6 @@ application_plan_parametrage_aggregation_code_serie_mensuel <-function(Aggregati
   print("Calcul des montants ponderes cumules par code_sortie")
   
   # Aggregation de la table par code
-
-  #RequeteSQL <- paste0("
-  #      select code as code_entree, OBS_STATUS,CONF_STATUS, Periode_deb, revision_deb, Periode_fin, revision_fin, sum(montantcuml) as montant 
-  #      from TMP_AGG 
-  #      group by code,OBS_STATUS,CONF_STATUS, Periode_deb, revision_deb, Periode_fin, revision_fin");
-  #RequeteSqlFinaleCAS <- paste0("create table ",appPlanAggOutCAS, " {options replication=0 replace=true} as ",RequeteSQL,";")
-  
-  #cas.fedSql.execDirect(ConnectionSecureDB,query=RequeteSqlFinaleCAS)
  
   cas.aggregation.aggregate(CASConnexion,
       table=list(
